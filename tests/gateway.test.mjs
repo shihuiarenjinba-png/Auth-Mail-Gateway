@@ -250,3 +250,15 @@ test("production configuration rejects a localhost application callback", async 
   assert.equal(body.ready, false);
   assert.equal(body.configured_apps, 0);
 });
+
+
+test("health reports current gateway version and safe disabled state", async () => {
+  const e=env();
+  e.AUTH_MAIL_ENABLED="false";
+  const response=await worker.fetch(new Request("https://auth.example.com/health"),e);
+  const body=await response.json();
+  assert.equal(body.service,"auth-mail-gateway");
+  assert.equal(body.version,"0.3.0");
+  assert.equal(body.enabled,false);
+  assert.equal(body.ready,false);
+});
