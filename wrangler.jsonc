@@ -20,10 +20,17 @@
   "migrations": [
     {
       "tag": "v1",
-      "new_sqlite_classes": ["AuthState"]
+      "new_sqlite_classes": [
+        "AuthState"
+      ]
     }
   ],
   "observability": {
     "enabled": true
-  }
+  },
+  "send_email": [
+    {
+      "name": "EMAIL"
+    }
+  ]
 }
