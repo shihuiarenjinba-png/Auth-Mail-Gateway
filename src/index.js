@@ -10,6 +10,7 @@ const ASSERTION_TTL_MS = 2 * 60 * 1000;
 const SIGNATURE_SKEW_SECONDS = 300;
 const RATE_WINDOW_MS = 15 * 60 * 1000;
 const RATE_LIMIT = 3;
+const SERVICE_VERSION = "0.3.0";
 
 class HttpError extends Error {
   constructor(status, code) {
@@ -256,7 +257,7 @@ function health(env) {
   const status = gatewayStatus(env);
   return json({
     service: "auth-mail-gateway",
-    version: "0.2.0",
+    version: SERVICE_VERSION,
     enabled: status.enabled,
     ready: status.ready,
     email_provider: status.email_provider,
