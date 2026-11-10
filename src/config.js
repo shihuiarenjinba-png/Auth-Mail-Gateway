@@ -8,6 +8,14 @@ function parseObject(value) {
   }
 }
 
+function singleLine(value, maxLength) {
+  return String(value || "")
+    .replace(/[\u0000-\u001f\u007f]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, maxLength);
+}
+
 function validHttpsUrl(value, allowLocal = false) {
   try {
     const url = new URL(value);
@@ -41,10 +49,8 @@ export function appConfig(env, appId) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
   const callback = validHttpsUrl(raw.callback_url, true);
   if (!callback || callback.search) return null;
-  const name = typeof raw.name === "string" && raw.name.trim() ? raw.name.trim().slice(0, 80) : appId;
-  const subject = typeof raw.subject === "string" && raw.subject.trim()
-    ? raw.subject.trim().slice(0, 120)
-    : `${name} login link / ログインリンク`;
+  const name = singleLine(raw.name, 80) || appId;
+  const subject = singleLine(raw.subject, 120) || `${name} login link / ログインリンク`;
   return { id: appId, name, callback_url: callback.toString(), subject };
 }
 
