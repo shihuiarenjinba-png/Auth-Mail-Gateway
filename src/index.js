@@ -130,6 +130,8 @@ async function readSignedJson(request, env) {
 }
 
 function emailBody(app, verifyUrl) {
+  const safeName = escapeHtml(app.name);
+  const safeUrl = escapeHtml(verifyUrl);
   const text = `${app.name} の本人確認リンクです。10分以内に開いてください。\n\n${verifyUrl}\n\nこの操作に心当たりがない場合は、このメールを無視してください。\n\nThis is your ${app.name} verification link. It expires in 10 minutes and can be used once.`;
   const html = `<p><strong>${safeName}</strong> の本人確認リンクです。</p><p><a href="${safeUrl}">本人確認を続ける / Continue verification</a></p><p>このリンクは10分間・1回限り有効です。</p><p>This link expires in 10 minutes and can be used once.</p><p>心当たりがない場合は、このメールを無視してください。</p>`;
   return { text, html };
