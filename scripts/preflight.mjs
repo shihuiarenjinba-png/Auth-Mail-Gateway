@@ -2,7 +2,7 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 
 const root = process.cwd();
-const config = JSON.parse(readFileSync(join(root, "wrangler.jsonc"), "utf8");
+const config = JSON.parse(readFileSync(join(root, "wrangler.jsonc"), "utf8"));
 
 function fail(message) {
   throw new Error(message);
