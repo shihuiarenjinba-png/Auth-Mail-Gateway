@@ -31,10 +31,30 @@ function json(body, status = 200) {
   });
 }
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
 function safeHtml(message, status = 200) {
   return new Response(
-    `<!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Auth Mail Gateway</title><body style="font-family:system-ui;max-width:640px;margin:60px auto;padding:0 20px"><h1>Auth Mail Gateway</h1><p>${message}</p></body></html>`,
-    { status, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "Referrer-Policy": "no-referrer" } }
+    `<!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Auth Mail Gateway</title><body style="font-family:system-ui;max-width:640px;margin:60px auto;padding:0 20px"><h1>Auth Mail Gateway</h1><p>${escapeHtml(message)}</p></body></html>`,
+    {
+      status,
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Referrer-Policy": "no-referrer",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()"
+      }
+    }
   );
 }
 
@@ -116,7 +136,9 @@ async function readSignedJson(request, env) {
 
 function emailBody(app, verifyUrl) {
   const text = `${app.name} の本人確認リンクです。10分以内に開いてください。\n\n${verifyUrl}\n\nこの操作に心当たりがない場合は、このメールを無視してください。\n\nThis is your ${app.name} verification link. It expires in 10 minutes and can be used once.`;
-  const html = `<p><strong>${app.name}</strong> の本人確認リンクです。</p><p><a href="${verifyUrl}">本人確認を続ける / Continue verification</a></p><p>このリンクは10分間・1回限り有効です。</p><p>This link expires in 10 minutes and can be used once.</p><p>心当たりがない場合は、このメールを無視してください。</p>`;
+  const safeName = escapeHtml(app.name);
+  const safeUrl = escapeHtml(verifyUrl);
+  const html = `<p><strong>${safeName}</strong> の本人確認リンクです。</p><p><a href="${safeUrl}">本人確認を続ける / Continue verification</a></p><p>このリンクは10分間・1回限り有効です。</p><p>This link expires in 10 minutes and can be used once.</p><p>心当たりがない場合は、このメールを無視してください。</p>`;
   return { text, html };
 }
 
@@ -234,7 +256,7 @@ function health(env) {
   const status = gatewayStatus(env);
   return json({
     service: "auth-mail-gateway",
-    version: "0.1.0",
+    version: "0.2.0",
     enabled: status.enabled,
     ready: status.ready,
     email_provider: status.email_provider,

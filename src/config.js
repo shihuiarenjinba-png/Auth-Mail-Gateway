@@ -20,6 +20,15 @@ function validHttpsUrl(value, allowLocal = false) {
   }
 }
 
+function safeDisplayText(value, fallback, maxLength) {
+  const text = String(value ?? "")
+    .replace(/[\u0000-\u001F\u007F]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, maxLength);
+  return text || fallback;
+}
+
 export function normalizeEmail(value) {
   const email = String(value || "").trim().toLowerCase();
   if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null;
@@ -41,10 +50,8 @@ export function appConfig(env, appId) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
   const callback = validHttpsUrl(raw.callback_url, true);
   if (!callback || callback.search) return null;
-  const name = typeof raw.name === "string" && raw.name.trim() ? raw.name.trim().slice(0, 80) : appId;
-  const subject = typeof raw.subject === "string" && raw.subject.trim()
-    ? raw.subject.trim().slice(0, 120)
-    : `${name} login link / ログインリンク`;
+  const name = safeDisplayText(raw.name, appId, 80);
+  const subject = safeDisplayText(raw.subject, `${name} login link / ログインリンク`, 120);
   return { id: appId, name, callback_url: callback.toString(), subject };
 }
 

@@ -200,3 +200,29 @@ test("per-email rate limit blocks the fourth request within 15 minutes", async (
   const fourth = await worker.fetch(await signedRequest("/v1/magic-link/request", { email: "rate@example.com" }, e, { nonce: "nonce_rate_4_1234567890" }), e);
   assert.equal(fourth.status, 429);
 });
+
+
+test("configured display text cannot inject email headers or HTML", async () => {
+  const e = env();
+  e.APPS_CONFIG_JSON = JSON.stringify({
+    demandscope: {
+      name: 'Demo <img src=x onerror=alert(1)>',
+      subject: 'Login\r\nBcc: attacker@example.com',
+      callback_url: 'https://app.example.com/api/auth-mail/callback'
+    }
+  });
+
+  const response = await worker.fetch(
+    await signedRequest("/v1/magic-link/request", { email: "buyer@example.com" }, e, {
+      nonce: "nonce_escape_1234567890"
+    }),
+    e
+  );
+
+  assert.equal(response.status, 202);
+  assert.equal(e._sent.length, 1);
+  assert.equal(e._sent[0].subject.includes("\r"), false);
+  assert.equal(e._sent[0].subject.includes("\n"), false);
+  assert.match(e._sent[0].html, /Demo &lt;img src=x onerror=alert\(1\)&gt;/);
+  assert.equal(e._sent[0].html.includes("<img src=x"), false);
+});

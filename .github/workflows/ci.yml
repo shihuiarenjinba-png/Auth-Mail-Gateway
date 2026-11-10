@@ -16,6 +16,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
-      - run: npm install
+      - run: npm install --no-audit --no-fund
       - run: npm run check
+      - name: Reject common committed secret formats
+        run: |
+          if git grep -nE '(sk|rk)_(live|test)_[A-Za-z0-9]{16,}|whsec_[A-Za-z0-9]{16,}' -- .; then
+            echo 'Potential Stripe secret material found in tracked files.' >&2
+            exit 1
+          fi
       - run: npx wrangler deploy --dry-run --outdir dist-dry-run
