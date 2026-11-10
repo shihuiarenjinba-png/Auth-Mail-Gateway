@@ -1,6 +1,6 @@
 # Auth Mail Gateway
 
-Current code version: `0.2.0`.
+Current code version: `0.3.0`.
 
 Shared email-identity gateway for DemandScope, NamiData, and future SaaS products.
 
@@ -43,9 +43,9 @@ Fail-closed by default.
 - no explicit custom `PUBLIC_BASE_URL`
 - no registered app
 - no app shared secret
-- no Email Service binding
+- Cloudflare Email Sending binding `EMAIL` declared in Wrangler, but unusable until an owned sender domain is onboarded
 
-Until Cloudflare configuration is completed, the gateway cannot send email. Production readiness also requires an explicit custom HTTPS auth domain; `workers.dev` and `pages.dev` are rejected as `PUBLIC_BASE_URL`.
+Until Cloudflare Email Service domain onboarding and runtime variables/secrets are completed, the gateway cannot become ready or send customer email. Production readiness also requires an explicit custom HTTPS auth domain; `workers.dev` and `pages.dev` are rejected as `PUBLIC_BASE_URL`.
 
 ## Endpoints
 
@@ -88,6 +88,10 @@ Each application must use a different shared HMAC secret.
 
 ## Current activation status
 
-The repository is code-ready but intentionally not mail-ready. Keep `AUTH_MAIL_ENABLED=false` until the Cloudflare sender domain, Email Sending binding, custom auth domain, application-specific secrets, and end-to-end tests all pass.
+The repository is code-ready and declares the native Cloudflare Email Sending binding, but remains intentionally not mail-ready. Keep `AUTH_MAIL_ENABLED=false` until the Cloudflare sender domain, Email Sending binding, custom auth domain, application-specific secrets, and end-to-end tests all pass.
 
 Data Shaper is documented as a future consumer but remains HOLD until its server-side Stripe entitlement/callback layer exists.
+
+## Email transport decision
+
+Version 0.3.0 uses the native Cloudflare Email Sending Worker binding named `EMAIL` only. The previous REST fallback was removed to reduce secret management and cross-account risk.

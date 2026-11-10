@@ -50,7 +50,7 @@ function env() {
     APPS_CONFIG_JSON: JSON.stringify({
       demandscope: {
         name: "DemandScope",
-        callback_url: "https://app.example.com/api/auth-mail/callback"
+        callback_url: "https://app.example.com/api/magic-link/callback"
       }
     }),
     APP_SHARED_SECRETS_JSON: JSON.stringify({ demandscope: APP_SECRET }),
@@ -124,7 +124,7 @@ test("magic-link flow verifies email and returns a one-time assertion to the con
   assert.equal(verified.status, 302);
   const callback = new URL(verified.headers.get("Location"));
   assert.equal(callback.origin, "https://app.example.com");
-  assert.equal(callback.pathname, "/api/auth-mail/callback");
+  assert.equal(callback.pathname, "/api/magic-link/callback");
   assert.equal(callback.searchParams.get("state"), "csrf_state_1");
   assert.equal(callback.searchParams.has("email"), false);
   assert.ok(callback.searchParams.get("code"));
@@ -208,7 +208,7 @@ test("configured display text cannot inject email headers or HTML", async () => 
     demandscope: {
       name: 'Demo <img src=x onerror=alert(1)>',
       subject: 'Login\r\nBcc: attacker@example.com',
-      callback_url: 'https://app.example.com/api/auth-mail/callback'
+      callback_url: 'https://app.example.com/api/magic-link/callback'
     }
   });
 
@@ -225,4 +225,28 @@ test("configured display text cannot inject email headers or HTML", async () => 
   assert.equal(e._sent[0].subject.includes("\n"), false);
   assert.match(e._sent[0].html, /Demo &lt;img src=x onerror=alert\(1\)&gt;/);
   assert.equal(e._sent[0].html.includes("<img src=x"), false);
+});
+
+
+test("gateway is not ready without the Cloudflare EMAIL binding", async () => {
+  const e = env();
+  delete e.EMAIL;
+  const response = await worker.fetch(new Request("https://auth.example.com/health"), e);
+  const body = await response.json();
+  assert.equal(body.ready, false);
+  assert.equal(body.email_provider, "none");
+});
+
+test("production configuration rejects a localhost application callback", async () => {
+  const e = env();
+  e.APPS_CONFIG_JSON = JSON.stringify({
+    demandscope: {
+      name: "DemandScope",
+      callback_url: "http://localhost:8788/api/magic-link/callback"
+    }
+  });
+  const response = await worker.fetch(new Request("https://auth.example.com/health"), e);
+  const body = await response.json();
+  assert.equal(body.ready, false);
+  assert.equal(body.configured_apps, 0);
 });

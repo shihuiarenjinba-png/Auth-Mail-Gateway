@@ -11,7 +11,7 @@ The committed Wrangler config is fail-closed:
 - `AUTH_MAIL_ENABLED=false`
 - sender is deliberately invalid
 - no application is registered
-- no email binding is required for the first deployment
+- `EMAIL` binding is declared in Wrangler; Cloudflare Email Service must be onboarded before customer email can be sent
 - Durable Object state is configured in code
 
 A first deployment can therefore expose only `/` and `/health` without sending mail.
@@ -36,20 +36,15 @@ Arbitrary-recipient Email Sending requires Workers Paid. Verified-destination te
 
 ## Phase 3 — add Email Sending to the Worker
 
-Preferred method: an Email Sending Worker binding named:
+Required method: the native Email Sending Worker binding named:
 
 ```text
 EMAIL
 ```
 
-The application automatically prefers `env.EMAIL.send()`.
+The application requires `env.EMAIL.send()` and fails closed when the binding is unavailable.
 
-If a binding cannot be used, the gateway also supports the REST API fallback:
-
-- variable: `CLOUDFLARE_EMAIL_ACCOUNT_ID`
-- secret: `CLOUDFLARE_EMAIL_API_TOKEN`
-
-Use a restricted Email Sending token, never the Global API Key.
+The REST API fallback has been removed. Do not add a Cloudflare Email API token to this Worker unless the architecture is deliberately reviewed again.
 
 ## Phase 4 — gateway variables and secrets
 

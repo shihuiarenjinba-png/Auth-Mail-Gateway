@@ -1,6 +1,6 @@
 {
   "name": "auth-mail-gateway",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "description": "Fail-closed shared magic-link email identity gateway for multiple SaaS products.",
