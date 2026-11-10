@@ -1,3 +1,19 @@
+# Domain onboarding — first step
+
+A custom domain is an Internet name you own, such as `example.com`.
+
+For this Gateway, one owned domain gives two identities:
+
+- `auth.example.com` — the public HTTPS address of the Auth Mail Gateway Worker
+- `noreply@example.com` — the sender address used by Cloudflare Email Service
+
+You do **not** need to run your own mail server.
+
+If you do not own a domain yet, the simplest path is Cloudflare Registrar:
+https://dash.cloudflare.com/?to=/:account/domains/register
+
+After purchase, keep the domain on Cloudflare DNS. Then continue with Email Service onboarding and Worker Custom Domain setup below.
+
 # Operator handoff — Cloudflare activation
 
 The code is intentionally fail-closed. Complete this checklist in the **Cloudflare account created for Auth Mail Gateway**, not the DemandScope/NamiData account.
