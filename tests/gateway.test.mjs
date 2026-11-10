@@ -40,6 +40,7 @@ class FakeNamespace {
 }
 
 const APP_SECRET = "S".repeat(48);
+const OTHER_SECRET = "T".repeat(48);
 
 function env() {
   const sent = [];
@@ -50,10 +51,14 @@ function env() {
     APPS_CONFIG_JSON: JSON.stringify({
       demandscope: {
         name: "DemandScope",
-        callback_url: "https://app.example.com/api/auth-mail/callback"
+        callback_url: "https://app.example.com/api/magic-link/callback"
+      },
+      otherapp: {
+        name: "Other App",
+        callback_url: "https://other.example.com/api/auth/callback"
       }
     }),
-    APP_SHARED_SECRETS_JSON: JSON.stringify({ demandscope: APP_SECRET }),
+    APP_SHARED_SECRETS_JSON: JSON.stringify({ demandscope: APP_SECRET, otherapp: OTHER_SECRET }),
     AUTH_STATE: new FakeNamespace(),
     EMAIL: {
       async send(message) { sent.push(message); return { messageId: "msg_test" }; }
@@ -62,14 +67,16 @@ function env() {
   };
 }
 
-async function signedRequest(path, body, e, { nonce = "nonce_1234567890abcdef", timestamp = String(Math.floor(Date.now() / 1000)) } = {}) {
+async function signedRequest(path, body, e, { nonce = "nonce_1234567890abcdef", timestamp = String(Math.floor(Date.now() / 1000)), appId = "demandscope", secret = APP_SECRET } = {}) {
   const raw = JSON.stringify(body);
-  const signature = await hmacHex(APP_SECRET, `${timestamp}.${nonce}.${raw}`);
+  const canonical = `v1\nPOST\n${path}\n${timestamp}\n${nonce}\n${raw}`;
+  const signature = await hmacHex(secret, canonical);
   return new Request("https://auth.example.com" + path, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-auth-mail-app": "demandscope",
+      "x-auth-mail-version": "1",
+      "x-auth-mail-app": appId,
       "x-auth-mail-timestamp": timestamp,
       "x-auth-mail-nonce": nonce,
       "x-auth-mail-signature": signature
@@ -124,7 +131,7 @@ test("magic-link flow verifies email and returns a one-time assertion to the con
   assert.equal(verified.status, 302);
   const callback = new URL(verified.headers.get("Location"));
   assert.equal(callback.origin, "https://app.example.com");
-  assert.equal(callback.pathname, "/api/auth-mail/callback");
+  assert.equal(callback.pathname, "/api/magic-link/callback");
   assert.equal(callback.searchParams.get("state"), "csrf_state_1");
   assert.equal(callback.searchParams.has("email"), false);
   assert.ok(callback.searchParams.get("code"));
@@ -156,6 +163,16 @@ test("tampered and stale signed requests are rejected before email send", async 
   assert.equal(response.status, 401);
   assert.equal(e._sent.length, 0);
 
+  const pathBound = await signedRequest("/v1/magic-link/request", { email: "buyer@example.com" }, e, { nonce: "nonce_path_1234567890123" });
+  const substituted = new Request("https://auth.example.com/v1/assertion/consume", {
+    method: "POST",
+    headers: pathBound.headers,
+    body: await pathBound.text()
+  });
+  response = await worker.fetch(substituted, e);
+  assert.equal(response.status, 401);
+  assert.equal(e._sent.length, 0);
+
   const stale = String(Math.floor(Date.now() / 1000) - 1000);
   response = await worker.fetch(
     await signedRequest("/v1/magic-link/request", { email: "buyer@example.com" }, e, {
@@ -178,6 +195,37 @@ test("oversized state is rejected and cannot create a magic link", async () => {
   );
   assert.equal(response.status, 400);
   assert.equal(e._sent.length, 0);
+});
+
+test("a different app cannot consume or burn another app's assertion", async () => {
+  const e = env();
+  const request = await signedRequest("/v1/magic-link/request", { email: "buyer@example.com", state: "state_cross_app" }, e, {
+    nonce: "nonce_cross_app_12345678"
+  });
+  const created = await worker.fetch(request, e);
+  assert.equal(created.status, 202);
+  const verifyUrl = e._sent[0].text.match(/https:\/\/[^\s]+/)[0];
+  const verified = await worker.fetch(new Request(verifyUrl), e);
+  const callback = new URL(verified.headers.get("Location"));
+  const code = callback.searchParams.get("code");
+
+  const wrong = await worker.fetch(
+    await signedRequest("/v1/assertion/consume", { code }, e, {
+      nonce: "nonce_wrong_app_12345678",
+      appId: "otherapp",
+      secret: OTHER_SECRET
+    }),
+    e
+  );
+  assert.equal(wrong.status, 400);
+
+  const correct = await worker.fetch(
+    await signedRequest("/v1/assertion/consume", { code }, e, {
+      nonce: "nonce_right_app_12345678"
+    }),
+    e
+  );
+  assert.equal(correct.status, 200);
 });
 
 test("signed app requests are replay protected", async () => {
