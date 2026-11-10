@@ -49,6 +49,14 @@ The same per-app shared secret is stored as a Secret in the application's Cloudf
 
 Different applications should use different secrets.
 
+Generate a 384-bit URL-safe secret locally:
+
+```bash
+npm run generate:app-secret
+```
+
+Copy the output directly into the Gateway secret and the matching product secret. Do not paste the generated value into GitHub, Notion, issues, logs, or chat.
+
 ## Signed server-to-server request
 
 Required headers:
