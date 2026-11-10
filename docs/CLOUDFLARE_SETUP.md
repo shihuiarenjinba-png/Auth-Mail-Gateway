@@ -34,22 +34,30 @@ No inbox is required for the noreply address.
 
 Arbitrary-recipient Email Sending requires Workers Paid. Verified-destination testing is more limited on Free.
 
-## Phase 3 — add Email Sending to the Worker
+## Phase 3 — choose Email Sending transport
 
-Preferred method: an Email Sending Worker binding named:
+The gateway supports two Cloudflare Email Service transports.
+
+### REST path — recommended for the first handoff
+
+This path requires no repository configuration change:
+
+- variable: `CLOUDFLARE_EMAIL_ACCOUNT_ID`
+- secret: `CLOUDFLARE_EMAIL_API_TOKEN`
+
+Create a narrowly scoped token with **Email Sending: Edit**. Never use the Global API Key.
+
+### Worker binding path
+
+The gateway also supports a Worker Email Sending binding named:
 
 ```text
 EMAIL
 ```
 
-The application automatically prefers `env.EMAIL.send()`.
+If this path is chosen, add the `send_email` binding to `wrangler.jsonc` in GitHub and redeploy. Do not rely on a dashboard-only binding, because later Wrangler deployments can treat the repository configuration as the source of truth.
 
-If a binding cannot be used, the gateway also supports the REST API fallback:
-
-- variable: `CLOUDFLARE_EMAIL_ACCOUNT_ID`
-- secret: `CLOUDFLARE_EMAIL_API_TOKEN`
-
-Use a restricted Email Sending token, never the Global API Key.
+The application automatically prefers `env.EMAIL.send()` when the binding exists.
 
 ## Phase 4 — gateway variables and secrets
 
@@ -69,6 +77,8 @@ APP_SHARED_SECRETS_JSON={...}
 ```
 
 Do not enable the gateway yet.
+
+At this stage, `GET /health` should eventually report `configured=true`, `enabled=false`, and `ready=false` once sender, state, email transport, and at least one app are configured.
 
 ## Phase 5 — recommended custom domain
 
@@ -140,3 +150,14 @@ AUTH_MAIL_ENABLED=true
 Do not copy old Cloudflare account IDs, Worker URLs, D1 IDs, or API tokens from DemandScope/NamiData into this project.
 
 This gateway has its own Cloudflare account context. Product applications talk to it only over HTTPS with HMAC.
+
+
+## CI deployment validation
+
+Every push/PR runs:
+
+- unit/security tests,
+- JavaScript syntax checks,
+- `wrangler deploy --dry-run`.
+
+This validates the Worker bundle and Durable Object configuration without uploading to Cloudflare.
