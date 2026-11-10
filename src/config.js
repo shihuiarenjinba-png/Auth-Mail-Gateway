@@ -48,7 +48,7 @@ export function appConfig(env, appId) {
   const all = parseObject(env?.APPS_CONFIG_JSON);
   const raw = all[appId];
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
-  const callback = validHttpsUrl(raw.callback_url, true);
+  const localBase = configuredPublicBaseUrl(env);\n  const callback = validHttpsUrl(raw.callback_url, !!localBase?.startsWith("http://"));
   if (!callback || callback.search) return null;
   const name = safeDisplayText(raw.name, appId, 80);
   const subject = safeDisplayText(raw.subject, `${name} login link / ログインリンク`, 120);
@@ -85,11 +85,7 @@ export function publicBaseUrl(env, request) {
 }
 
 export function emailProvider(env) {
-  if (env?.EMAIL && typeof env.EMAIL.send === "function") return "binding";
-  const account = String(env?.CLOUDFLARE_EMAIL_ACCOUNT_ID || "").trim();
-  const token = String(env?.CLOUDFLARE_EMAIL_API_TOKEN || "").trim();
-  if (/^[a-f0-9]{32}$/i.test(account) && token.length >= 20) return "rest";
-  return "none";
+  return env?.EMAIL && typeof env.EMAIL.send === "function" ? "binding" : "none";
 }
 
 export function gatewayStatus(env) {
