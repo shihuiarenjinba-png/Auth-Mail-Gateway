@@ -73,6 +73,7 @@ See:
 - [Cloudflare setup](docs/CLOUDFLARE_SETUP.md)
 - [Application integration](docs/INTEGRATION.md)
 - [Data Shaper integration gate](docs/DATA_SHAPER_INTEGRATION.md)
+- [Zero-fixed-cost authentication architecture](docs/ZERO_FIXED_COST_AUTH.md)
 
 ## Secrets
 
@@ -95,3 +96,7 @@ Data Shaper is documented as a future consumer but remains HOLD until its server
 ## Email transport decision
 
 Version 0.3.0 uses the native Cloudflare Email Sending Worker binding named `EMAIL` only. The previous REST fallback was removed to reduce secret management and cross-account risk.
+
+## Cost strategy
+
+For pre-revenue products, the preferred customer authentication path is documented in `docs/ZERO_FIXED_COST_AUTH.md`. The current email-sending Gateway remains disabled and reusable as a future branded fallback.
