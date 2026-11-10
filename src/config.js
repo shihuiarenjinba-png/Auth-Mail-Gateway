@@ -54,16 +54,23 @@ export function appSecret(env, appId) {
   return typeof secret === "string" && secret.trim().length >= 32 ? secret.trim() : null;
 }
 
-export function publicBaseUrl(env, request) {
+export function configuredPublicBaseUrl(env) {
   const configured = typeof env?.PUBLIC_BASE_URL === "string" ? env.PUBLIC_BASE_URL.trim() : "";
-  if (configured) {
-    const parsed = validHttpsUrl(configured, true);
-    if (!parsed || parsed.pathname !== "/" || parsed.search) return null;
-    return parsed.origin;
-  }
+  if (!configured) return null;
+  const parsed = validHttpsUrl(configured, true);
+  if (!parsed || parsed.pathname !== "/" || parsed.search) return null;
+  const local = ["localhost", "127.0.0.1", "[::1]"].includes(parsed.hostname);
+  if (!local && (/(?:^|\.)workers\.dev$/i.test(parsed.hostname) || /(?:^|\.)pages\.dev$/i.test(parsed.hostname))) return null;
+  return parsed.origin;
+}
+
+export function publicBaseUrl(env, request) {
+  const configured = configuredPublicBaseUrl(env);
+  if (configured) return configured;
   try {
     const url = new URL(request.url);
-    if (url.protocol !== "https:" && !(url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname))) return null;
+    const local = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+    if (!local || url.protocol !== "http:") return null;
     return url.origin;
   } catch {
     return null;
@@ -84,11 +91,14 @@ export function gatewayStatus(env) {
   const sender = senderEmail(env);
   const stateReady = !!env?.AUTH_STATE?.idFromName && !!env?.AUTH_STATE?.get;
   const provider = emailProvider(env);
+  const baseUrl = configuredPublicBaseUrl(env);
   const appIds = Object.keys(apps).filter(id => appConfig(env, id) && appSecret(env, id));
   return {
     enabled,
-    ready: enabled && !!sender && stateReady && provider !== "none" && appIds.length > 0,
+    ready: enabled && !!sender && !!baseUrl && stateReady && provider !== "none" && appIds.length > 0,
     sender_domain: sender ? sender.split("@")[1] : null,
+    public_base_url: baseUrl,
+    public_base_url_configured: !!baseUrl,
     email_provider: provider,
     state_ready: stateReady,
     configured_apps: appIds.length

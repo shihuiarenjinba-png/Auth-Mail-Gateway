@@ -70,7 +70,7 @@ APP_SHARED_SECRETS_JSON={...}
 
 Do not enable the gateway yet.
 
-## Phase 5 — recommended custom domain
+## Phase 5 — required custom domain
 
 Map a stable domain such as:
 
@@ -86,7 +86,7 @@ Set:
 PUBLIC_BASE_URL=https://auth.your-domain.example
 ```
 
-This domain is what users see in verification links.
+This domain is what users see in verification links. The gateway will not report `ready=true` unless `PUBLIC_BASE_URL` is explicitly set to a non-`workers.dev` / non-`pages.dev` HTTPS domain (localhost HTTP is allowed only for local development).
 
 ## Phase 6 — register applications
 
@@ -115,7 +115,7 @@ Cloudflare accounts may differ. No Cloudflare API token is shared between produc
 
 Verify:
 
-- health shows the correct sender domain and provider
+- health shows the correct sender domain, email provider, and `public_base_url_configured=true`
 - SPF / DKIM pass
 - a Magic Link expires after 10 minutes
 - it cannot be reused
