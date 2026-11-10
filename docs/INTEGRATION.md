@@ -31,7 +31,7 @@ Gateway non-secret variable `APPS_CONFIG_JSON`:
 {
   "demandscope": {
     "name": "DemandScope",
-    "callback_url": "https://web-stock-78r.pages.dev/api/auth-mail/callback",
+    "callback_url": "https://web-stock-78r.pages.dev/api/magic-link/callback",
     "subject": "DemandScope Pro login link / ログインリンク"
   }
 }
@@ -113,7 +113,7 @@ The token is valid for ten minutes and can be consumed once.
 The gateway then redirects to the configured application callback:
 
 ```text
-https://application.example/api/auth-mail/callback?code=...&state=...
+https://application.example/api/magic-link/callback?code=...&state=...
 ```
 
 The email address is never put in the callback URL.
@@ -159,7 +159,7 @@ DemandScope currently contains its own disabled local Magic Link implementation.
    - accepts the purchase email,
    - verifies the active DemandScope Stripe subscription,
    - signs and sends the gateway request.
-4. Add `/api/auth-mail/callback`:
+4. Add `/api/magic-link/callback`:
    - validates the returned `state`,
    - exchanges the code with the gateway,
    - verifies the DemandScope Stripe subscription again,
