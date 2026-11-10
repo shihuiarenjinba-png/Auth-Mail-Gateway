@@ -69,3 +69,16 @@ If the sender domain or Email Service account is compromised, keep AUTH_MAIL_ENA
 ## Deployment rule
 
 Do not enable AUTH_MAIL_ENABLED until sender-domain onboarding, Email Service binding, custom auth domain, application allowlist, shared secrets, and end-to-end tests all pass.
+
+
+## Residual risks
+
+- Magic Links are bearer credentials. Anyone who obtains a live unused link can use it until expiry.
+- Compromise of the recipient mailbox defeats email-possession authentication.
+- Product-layer timing may still weakly correlate with entitlement lookup work even though public responses are intentionally generic.
+- Deliverability depends on sender reputation, SPF/DKIM/DMARC, suppression lists, and Email Service availability.
+- If REST transport is used, the Email Sending API token must be treated as a high-value credential because it can send from onboarded domains on that account.
+
+## Build gate
+
+CI must pass both application tests and `wrangler deploy --dry-run` after any Worker binding, Durable Object, routing, or security change.
