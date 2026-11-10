@@ -126,7 +126,11 @@ test("magic-link flow verifies email and returns a one-time assertion to the con
   assert.equal(callback.origin, "https://app.example.com");
   assert.equal(callback.pathname, "/api/auth-mail/callback");
   assert.equal(callback.searchParams.get("state"), "csrf_state_1");
+  assert.equal(callback.searchParams.has("email"), false);
   assert.ok(callback.searchParams.get("code"));
+
+  const reusedMagic = await worker.fetch(new Request(verifyUrl), e);
+  assert.equal(reusedMagic.status, 400);
 
   const code = callback.searchParams.get("code");
   const consume = await worker.fetch(await signedRequest("/v1/assertion/consume", { code }, e, { nonce: "nonce_2222222222222222" }), e);
@@ -137,6 +141,43 @@ test("magic-link flow verifies email and returns a one-time assertion to the con
 
   const reuse = await worker.fetch(await signedRequest("/v1/assertion/consume", { code }, e, { nonce: "nonce_3333333333333333" }), e);
   assert.equal(reuse.status, 400);
+});
+
+
+test("tampered and stale signed requests are rejected before email send", async () => {
+  const e = env();
+  const original = await signedRequest("/v1/magic-link/request", { email: "buyer@example.com" }, e, { nonce: "nonce_tamper_1234567890" });
+  const tampered = new Request(original.url, {
+    method: "POST",
+    headers: original.headers,
+    body: JSON.stringify({ email: "attacker@example.com" })
+  });
+  let response = await worker.fetch(tampered, e);
+  assert.equal(response.status, 401);
+  assert.equal(e._sent.length, 0);
+
+  const stale = String(Math.floor(Date.now() / 1000) - 1000);
+  response = await worker.fetch(
+    await signedRequest("/v1/magic-link/request", { email: "buyer@example.com" }, e, {
+      nonce: "nonce_stale_12345678901",
+      timestamp: stale
+    }),
+    e
+  );
+  assert.equal(response.status, 401);
+  assert.equal(e._sent.length, 0);
+});
+
+test("oversized state is rejected and cannot create a magic link", async () => {
+  const e = env();
+  const response = await worker.fetch(
+    await signedRequest("/v1/magic-link/request", { email: "buyer@example.com", state: "x".repeat(257) }, e, {
+      nonce: "nonce_state_12345678901"
+    }),
+    e
+  );
+  assert.equal(response.status, 400);
+  assert.equal(e._sent.length, 0);
 });
 
 test("signed app requests are replay protected", async () => {
