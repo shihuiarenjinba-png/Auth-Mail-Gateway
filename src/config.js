@@ -91,9 +91,11 @@ export function gatewayStatus(env) {
   const stateReady = !!env?.AUTH_STATE?.idFromName && !!env?.AUTH_STATE?.get;
   const provider = emailProvider(env);
   const appIds = Object.keys(apps).filter(id => appConfig(env, id) && appSecret(env, id));
+  const configured = !!sender && stateReady && provider !== "none" && appIds.length > 0;
   return {
     enabled,
-    ready: enabled && !!sender && stateReady && provider !== "none" && appIds.length > 0,
+    configured,
+    ready: enabled && configured,
     sender_domain: sender ? sender.split("@")[1] : null,
     email_provider: provider,
     state_ready: stateReady,
