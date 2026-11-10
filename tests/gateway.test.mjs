@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import worker from "../src/index.js";
 import { hmacHex } from "../src/crypto.js";
+import { readFileSync } from "node:fs";
 
 class FakeNamespace {
   constructor() { this.objects = new Map(); }
@@ -86,6 +87,7 @@ test("gateway is fail-closed until explicitly configured", async () => {
   });
   const body = await response.json();
   assert.equal(body.ready, false);
+  assert.equal(body.configured, false);
   assert.equal(body.enabled, false);
 });
 
@@ -136,4 +138,89 @@ test("per-email rate limit blocks the fourth request within 15 minutes", async (
   }
   const fourth = await worker.fetch(await signedRequest("/v1/magic-link/request", { email: "rate@example.com" }, e, { nonce: "nonce_rate_4_1234567890" }), e);
   assert.equal(fourth.status, 429);
+});
+
+
+test("stale signed requests are rejected before sending email", async () => {
+  const e = env();
+  const stale = String(Math.floor(Date.now() / 1000) - 601);
+  const res = await worker.fetch(
+    await signedRequest("/v1/magic-link/request", { email: "buyer@example.com" }, e, {
+      nonce: "nonce_stale_1234567890",
+      timestamp: stale
+    }),
+    e
+  );
+  assert.equal(res.status, 401);
+  assert.equal((await res.json()).error, "stale_signature");
+  assert.equal(e._sent.length, 0);
+});
+
+test("invalid HMAC signature is rejected before state or email work", async () => {
+  const e = env();
+  const raw = JSON.stringify({ email: "buyer@example.com" });
+  const res = await worker.fetch(new Request("https://auth.example.com/v1/magic-link/request", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-auth-mail-app": "demandscope",
+      "x-auth-mail-timestamp": String(Math.floor(Date.now() / 1000)),
+      "x-auth-mail-nonce": "nonce_invalid_123456789",
+      "x-auth-mail-signature": "0".repeat(64)
+    },
+    body: raw
+  }), e);
+  assert.equal(res.status, 401);
+  assert.equal((await res.json()).error, "invalid_signature");
+  assert.equal(e._sent.length, 0);
+});
+
+test("configured names and subjects cannot inject HTML or mail headers", async () => {
+  const e = env();
+  e.APPS_CONFIG_JSON = JSON.stringify({
+    demandscope: {
+      name: "<img src=x onerror=alert(1)>\r\nInjected",
+      subject: "Login\r\nBcc: attacker@example.com",
+      callback_url: "https://app.example.com/api/auth-mail/callback"
+    }
+  });
+  const res = await worker.fetch(
+    await signedRequest("/v1/magic-link/request", { email: "buyer@example.com" }, e, {
+      nonce: "nonce_escape_1234567890"
+    }),
+    e
+  );
+  assert.equal(res.status, 202);
+  assert.equal(e._sent.length, 1);
+  assert.ok(!/[\r\n]/.test(e._sent[0].subject));
+  assert.match(e._sent[0].subject, /Login Bcc:/);
+  assert.ok(!e._sent[0].html.includes("<img src=x"));
+  assert.match(e._sent[0].html, /&lt;img src=x onerror=alert\(1\)&gt;/);
+});
+
+test("responses include anti-framing and no-store headers", async () => {
+  const response = await worker.fetch(new Request("https://auth.example.com/health"), env());
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  assert.equal(response.headers.get("x-frame-options"), "DENY");
+  assert.match(response.headers.get("content-security-policy") || "", /frame-ancestors 'none'/);
+});
+
+test("committed Wrangler defaults remain fail-closed and contain no production sender", () => {
+  const cfg = JSON.parse(readFileSync(new URL("../wrangler.jsonc", import.meta.url), "utf8"));
+  assert.equal(cfg.vars.AUTH_MAIL_ENABLED, "false");
+  assert.match(cfg.vars.FROM_EMAIL, /\.invalid$/);
+  assert.equal(cfg.vars.APPS_CONFIG_JSON, "{}");
+  assert.equal("send_email" in cfg, false);
+  assert.deepEqual(cfg.migrations[0].new_sqlite_classes, ["AuthState"]);
+});
+
+
+test("health separates configured from enabled state", async () => {
+  const e = env();
+  e.AUTH_MAIL_ENABLED = "false";
+  const response = await worker.fetch(new Request("https://auth.example.com/health"), e);
+  const body = await response.json();
+  assert.equal(body.configured, true);
+  assert.equal(body.enabled, false);
+  assert.equal(body.ready, false);
 });
