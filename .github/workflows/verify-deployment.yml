@@ -1,0 +1,30 @@
+name: verify deployed gateway
+
+on:
+  workflow_dispatch:
+    inputs:
+      gateway_url:
+        description: Public HTTPS base URL of Auth Mail Gateway
+        required: true
+        type: string
+      expected_state:
+        description: Expected health state
+        required: true
+        default: disabled
+        type: choice
+        options:
+          - disabled
+          - ready
+
+permissions:
+  contents: read
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - run: node scripts/verify-health.mjs "${{ inputs.gateway_url }}" "${{ inputs.expected_state }}"
