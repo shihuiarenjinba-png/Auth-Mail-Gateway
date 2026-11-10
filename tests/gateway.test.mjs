@@ -87,6 +87,7 @@ test("gateway is fail-closed until explicitly configured", async () => {
   });
   const body = await response.json();
   assert.equal(body.ready, false);
+  assert.equal(body.configured, false);
   assert.equal(body.enabled, false);
 });
 
@@ -211,4 +212,15 @@ test("committed Wrangler defaults remain fail-closed and contain no production s
   assert.equal(cfg.vars.APPS_CONFIG_JSON, "{}");
   assert.equal("send_email" in cfg, false);
   assert.deepEqual(cfg.migrations[0].new_sqlite_classes, ["AuthState"]);
+});
+
+
+test("health separates configured from enabled state", async () => {
+  const e = env();
+  e.AUTH_MAIL_ENABLED = "false";
+  const response = await worker.fetch(new Request("https://auth.example.com/health"), e);
+  const body = await response.json();
+  assert.equal(body.configured, true);
+  assert.equal(body.enabled, false);
+  assert.equal(body.ready, false);
 });
