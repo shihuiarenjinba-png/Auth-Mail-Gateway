@@ -60,15 +60,15 @@ Do not use workers.dev or pages.dev as production `PUBLIC_BASE_URL`; the code re
 
 ## 5. Add Email Sending binding
 
-Preferred Worker binding:
+Required Worker binding:
 
 `EMAIL`
 
 Use Cloudflare Email Service's Email Sending binding.
 
-The Worker code automatically prefers `env.EMAIL.send()`.
+The Worker requires `env.EMAIL.send()` and reports not-ready if the binding is missing.
 
-Only if the binding cannot be used, configure the REST fallback with a restricted Email Sending API token.
+There is no REST fallback in v0.3.0; this intentionally avoids an additional Cloudflare API secret.
 
 ## 6. Generate the DemandScope app secret
 
