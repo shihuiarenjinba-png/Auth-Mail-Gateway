@@ -240,6 +240,7 @@ function health(env) {
     email_provider: status.email_provider,
     state_ready: status.state_ready,
     sender_domain: status.sender_domain,
+    public_base_url_configured: status.public_base_url_configured,
     configured_apps: status.configured_apps,
     magic_link_ttl_seconds: MAGIC_TTL_MS / 1000,
     assertion_ttl_seconds: ASSERTION_TTL_MS / 1000
