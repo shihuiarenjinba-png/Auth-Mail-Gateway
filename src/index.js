@@ -253,6 +253,7 @@ function health(env) {
     service: "auth-mail-gateway",
     version: "0.1.0",
     enabled: status.enabled,
+    configured: status.configured,
     ready: status.ready,
     email_provider: status.email_provider,
     state_ready: status.state_ready,
