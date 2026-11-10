@@ -1,5 +1,7 @@
 # Auth Mail Gateway
 
+Current code version: `0.2.0`.
+
 Shared email-identity gateway for DemandScope, NamiData, and future SaaS products.
 
 ## Purpose
@@ -70,6 +72,7 @@ See:
 
 - [Cloudflare setup](docs/CLOUDFLARE_SETUP.md)
 - [Application integration](docs/INTEGRATION.md)
+- [Data Shaper integration gate](docs/DATA_SHAPER_INTEGRATION.md)
 
 ## Secrets
 
@@ -82,3 +85,9 @@ Never commit:
 - Stripe secret keys
 
 Each application must use a different shared HMAC secret.
+
+## Current activation status
+
+The repository is code-ready but intentionally not mail-ready. Keep `AUTH_MAIL_ENABLED=false` until the Cloudflare sender domain, Email Sending binding, custom auth domain, application-specific secrets, and end-to-end tests all pass.
+
+Data Shaper is documented as a future consumer but remains HOLD until its server-side Stripe entitlement/callback layer exists.
