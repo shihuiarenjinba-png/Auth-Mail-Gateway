@@ -80,6 +80,7 @@ async function readSignedJson(request, env) {
   const raw = await request.text();
   if (raw.length > 16_384) throw new HttpError(413, "request_too_large");
 
+  const version = request.headers.get("x-auth-mail-version") || "";
   const appId = request.headers.get("x-auth-mail-app") || "";
   const timestampRaw = request.headers.get("x-auth-mail-timestamp") || "";
   const nonce = request.headers.get("x-auth-mail-nonce") || "";
@@ -88,7 +89,7 @@ async function readSignedJson(request, env) {
   const secret = appSecret(env, appId);
 
   if (!app || !secret) throw new HttpError(401, "unknown_app");
-  if (!/^\d{10,13}$/.test(timestampRaw) || !/^[A-Za-z0-9_-]{16,96}$/.test(nonce) || !/^[a-f0-9]{64}$/.test(signature)) {
+  if (version !== "1" || !/^\d{10,13}$/.test(timestampRaw) || !/^[A-Za-z0-9_-]{16,96}$/.test(nonce) || !/^[a-f0-9]{64}$/.test(signature)) {
     throw new HttpError(401, "invalid_signature_headers");
   }
 
@@ -97,7 +98,9 @@ async function readSignedJson(request, env) {
   const nowSeconds = Math.floor(Date.now() / 1000);
   if (Math.abs(nowSeconds - timestampSeconds) > SIGNATURE_SKEW_SECONDS) throw new HttpError(401, "stale_signature");
 
-  const expected = await hmacHex(secret, `${timestampRaw}.${nonce}.${raw}`);
+  const pathname = new URL(request.url).pathname;
+  const canonical = `v1\n${request.method.toUpperCase()}\n${pathname}\n${timestampRaw}\n${nonce}\n${raw}`;
+  const expected = await hmacHex(secret, canonical);
   if (!safeEqual(expected, signature)) throw new HttpError(401, "invalid_signature");
 
   const nonceHash = await sha256Hex(`${appId}:${nonce}`);
@@ -185,7 +188,7 @@ async function verifyMagicLink(request, env) {
 
   const code = randomToken();
   const codeHash = await sha256Hex(code);
-  const created = await createRecord(env, `assertion:${codeHash}`, {
+  const created = await createRecord(env, `assertion:${record.app_id}:${codeHash}`, {
     kind: "assertion",
     app_id: record.app_id,
     email: record.email,
@@ -217,7 +220,7 @@ async function consumeAssertion(request, env) {
   if (!validOpaqueToken(code)) throw new HttpError(400, "invalid_code");
 
   const codeHash = await sha256Hex(code);
-  const consumed = await consumeRecord(env, `assertion:${codeHash}`);
+  const consumed = await consumeRecord(env, `assertion:${appId}:${codeHash}`);
   if (!consumed.response.ok) throw new HttpError(400, "invalid_or_expired_code");
   const record = consumed.data?.record;
   if (!record || record.kind !== "assertion" || record.app_id !== appId || !normalizeEmail(record.email)) {
