@@ -9,7 +9,8 @@
     "check": "npm test && node --check src/crypto.js && node --check src/config.js && node --check src/email.js && node --check src/state.js && node --check src/index.js",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "worker:dry-run": "wrangler deploy --dry-run --outdir .wrangler-dry-run"
+    "worker:dry-run": "wrangler deploy --dry-run --outdir .wrangler-dry-run",
+    "generate:secret": "node scripts/generate-app-secret.mjs"
   },
   "devDependencies": {
     "wrangler": "^4.46.0"
