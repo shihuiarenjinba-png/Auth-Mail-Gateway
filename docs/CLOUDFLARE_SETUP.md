@@ -135,3 +135,7 @@ AUTH_MAIL_ENABLED=true
 Do not copy old Cloudflare account IDs, Worker URLs, D1 IDs, or API tokens from DemandScope/NamiData into this project.
 
 This gateway has its own Cloudflare account context. Product applications talk to it only over HTTPS with HMAC.
+
+## Dashboard-managed runtime variables
+
+Production runtime values such as `FROM_EMAIL`, `PUBLIC_BASE_URL`, and `APPS_CONFIG_JSON` are managed in the Cloudflare dashboard. `wrangler.jsonc` sets `keep_vars=true` and does not contain placeholder `vars`, so later GitHub/Wrangler deployments do not erase dashboard-managed values. Secrets remain Cloudflare Secrets.
