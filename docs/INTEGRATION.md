@@ -31,7 +31,7 @@ Gateway non-secret variable `APPS_CONFIG_JSON`:
 {
   "demandscope": {
     "name": "DemandScope",
-    "callback_url": "https://web-stock-78r.pages.dev/api/auth-mail/callback",
+    "callback_url": "https://web-stock-78r.pages.dev/api/magic-link/callback",
     "subject": "DemandScope Pro login link / ログインリンク"
   }
 }
