@@ -48,7 +48,8 @@ export function appConfig(env, appId) {
   const all = parseObject(env?.APPS_CONFIG_JSON);
   const raw = all[appId];
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
-  const localBase = configuredPublicBaseUrl(env);\n  const callback = validHttpsUrl(raw.callback_url, !!localBase?.startsWith("http://"));
+  const localBase = configuredPublicBaseUrl(env);
+  const callback = validHttpsUrl(raw.callback_url, !!localBase?.startsWith("http://"));
   if (!callback || callback.search) return null;
   const name = safeDisplayText(raw.name, appId, 80);
   const subject = safeDisplayText(raw.subject, `${name} login link / ログインリンク`, 120);
