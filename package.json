@@ -1,6 +1,6 @@
 {
   "name": "auth-mail-gateway",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "Fail-closed shared magic-link email identity gateway for multiple SaaS products.",
@@ -12,6 +12,6 @@
     "generate:app-secret": "node scripts/generate-app-secret.mjs"
   },
   "devDependencies": {
-    "wrangler": "^4.46.0"
+    "wrangler": "^4.159.0"
   }
 }
