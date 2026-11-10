@@ -1,0 +1,29 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "auth-mail-gateway",
+  "main": "src/index.js",
+  "compatibility_date": "2026-11-10",
+  "workers_dev": true,
+  "vars": {
+    "AUTH_MAIL_ENABLED": "false",
+    "FROM_EMAIL": "noreply@example.invalid",
+    "APPS_CONFIG_JSON": "{}"
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "AUTH_STATE",
+        "class_name": "AuthState"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["AuthState"]
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}

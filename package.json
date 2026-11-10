@@ -1,0 +1,16 @@
+{
+  "name": "auth-mail-gateway",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Fail-closed shared magic-link email identity gateway for multiple SaaS products.",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "check": "npm test && node --check src/crypto.js && node --check src/config.js && node --check src/email.js && node --check src/state.js && node --check src/index.js",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.46.0"
+  }
+}
