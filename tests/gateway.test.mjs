@@ -200,3 +200,39 @@ test("per-email rate limit blocks the fourth request within 15 minutes", async (
   const fourth = await worker.fetch(await signedRequest("/v1/magic-link/request", { email: "rate@example.com" }, e, { nonce: "nonce_rate_4_1234567890" }), e);
   assert.equal(fourth.status, 429);
 });
+
+
+test("app-wide rate limit blocks abusive fan-out across many recipient addresses", async () => {
+  const e = env();
+  for (let i = 0; i < 60; i++) {
+    const res = await worker.fetch(
+      await signedRequest(
+        "/v1/magic-link/request",
+        { email: `user${i}@example.com` },
+        e,
+        { nonce: `nonce_app_rate_${i}_1234567890` }
+      ),
+      e
+    );
+    assert.equal(res.status, 202);
+  }
+  const blocked = await worker.fetch(
+    await signedRequest(
+      "/v1/magic-link/request",
+      { email: "overflow@example.com" },
+      e,
+      { nonce: "nonce_app_rate_overflow_1234567890" }
+    ),
+    e
+  );
+  assert.equal(blocked.status, 429);
+});
+
+test("public verification responses are non-indexable and frame-protected", async () => {
+  const e = env();
+  const response = await worker.fetch(new Request("https://auth.example.com/v1/magic-link/verify?token=bad"), e);
+  assert.equal(response.status, 400);
+  assert.equal(response.headers.get("X-Robots-Tag"), "noindex, nofollow");
+  assert.equal(response.headers.get("X-Frame-Options"), "DENY");
+  assert.match(response.headers.get("Content-Security-Policy") || "", /frame-ancestors 'none'/);
+});
