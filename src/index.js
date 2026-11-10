@@ -10,6 +10,8 @@ const ASSERTION_TTL_MS = 2 * 60 * 1000;
 const SIGNATURE_SKEW_SECONDS = 300;
 const RATE_WINDOW_MS = 15 * 60 * 1000;
 const RATE_LIMIT = 3;
+const APP_RATE_WINDOW_MS = 60 * 1000;
+const APP_RATE_LIMIT = 60;
 
 class HttpError extends Error {
   constructor(status, code) {
@@ -26,7 +28,9 @@ function json(body, status = 200) {
       "Content-Type": "application/json; charset=utf-8",
       "Cache-Control": "no-store",
       "X-Content-Type-Options": "nosniff",
-      "Referrer-Policy": "no-referrer"
+      "Referrer-Policy": "no-referrer",
+      "X-Robots-Tag": "noindex, nofollow",
+      "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
     }
   });
 }
@@ -34,8 +38,25 @@ function json(body, status = 200) {
 function safeHtml(message, status = 200) {
   return new Response(
     `<!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Auth Mail Gateway</title><body style="font-family:system-ui;max-width:640px;margin:60px auto;padding:0 20px"><h1>Auth Mail Gateway</h1><p>${message}</p></body></html>`,
-    { status, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "Referrer-Policy": "no-referrer" } }
+    { status, headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "no-store",
+      "Referrer-Policy": "no-referrer",
+      "X-Content-Type-Options": "nosniff",
+      "X-Frame-Options": "DENY",
+      "X-Robots-Tag": "noindex, nofollow",
+      "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
+    } }
   );
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 function stateStub(env, name) {
@@ -68,11 +89,11 @@ async function revokeRecord(env, name) {
   return stateCall(env, name, "/record/revoke", {});
 }
 
-async function checkRate(env, name) {
+async function checkRate(env, name, windowMs = RATE_WINDOW_MS, limit = RATE_LIMIT) {
   return stateCall(env, name, "/rate/check", {
     now_ms: Date.now(),
-    window_ms: RATE_WINDOW_MS,
-    limit: RATE_LIMIT
+    window_ms: windowMs,
+    limit
   });
 }
 
@@ -116,7 +137,7 @@ async function readSignedJson(request, env) {
 
 function emailBody(app, verifyUrl) {
   const text = `${app.name} の本人確認リンクです。10分以内に開いてください。\n\n${verifyUrl}\n\nこの操作に心当たりがない場合は、このメールを無視してください。\n\nThis is your ${app.name} verification link. It expires in 10 minutes and can be used once.`;
-  const html = `<p><strong>${app.name}</strong> の本人確認リンクです。</p><p><a href="${verifyUrl}">本人確認を続ける / Continue verification</a></p><p>このリンクは10分間・1回限り有効です。</p><p>This link expires in 10 minutes and can be used once.</p><p>心当たりがない場合は、このメールを無視してください。</p>`;
+  const html = `<p><strong>${escapeHtml(app.name)}</strong> の本人確認リンクです。</p><p><a href="${escapeHtml(verifyUrl)}">本人確認を続ける / Continue verification</a></p><p>このリンクは10分間・1回限り有効です。</p><p>This link expires in 10 minutes and can be used once.</p><p>心当たりがない場合は、このメールを無視してください。</p>`;
   return { text, html };
 }
 
@@ -129,6 +150,10 @@ async function requestMagicLink(request, env) {
   if (!email) throw new HttpError(400, "invalid_email");
   const state = body?.state == null ? "" : String(body.state);
   if (state.length > 256) throw new HttpError(400, "state_too_long");
+
+  const appRate = await checkRate(env, `rate-app:${appId}`, APP_RATE_WINDOW_MS, APP_RATE_LIMIT);
+  if (appRate.response.status === 429) throw new HttpError(429, "rate_limited");
+  if (!appRate.response.ok) throw new HttpError(503, "state_error");
 
   const emailHash = await sha256Hex(email);
   const rate = await checkRate(env, `rate:${appId}:${emailHash}`);
