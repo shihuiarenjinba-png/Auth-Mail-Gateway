@@ -89,6 +89,28 @@ test("gateway is fail-closed until explicitly configured", async () => {
   assert.equal(body.enabled, false);
 });
 
+test("gateway refuses readiness without an explicit non-platform public auth domain", async () => {
+  const noBase = env();
+  delete noBase.PUBLIC_BASE_URL;
+  let response = await worker.fetch(new Request("https://gateway.workers.dev/health"), noBase);
+  let body = await response.json();
+  assert.equal(body.ready, false);
+  assert.equal(body.public_base_url_configured, false);
+
+  const platformBase = env();
+  platformBase.PUBLIC_BASE_URL = "https://gateway.workers.dev";
+  response = await worker.fetch(new Request("https://gateway.workers.dev/health"), platformBase);
+  body = await response.json();
+  assert.equal(body.ready, false);
+  assert.equal(body.public_base_url_configured, false);
+
+  const custom = env();
+  response = await worker.fetch(new Request("https://auth.example.com/health"), custom);
+  body = await response.json();
+  assert.equal(body.ready, true);
+  assert.equal(body.public_base_url_configured, true);
+});
+
 test("magic-link flow verifies email and returns a one-time assertion to the configured callback", async () => {
   const e = env();
   const request = await signedRequest("/v1/magic-link/request", { email: "Buyer@Example.com", state: "csrf_state_1", callback_url: "https://evil.example/" }, e);
