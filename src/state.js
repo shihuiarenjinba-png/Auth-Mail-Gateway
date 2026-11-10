@@ -55,7 +55,8 @@ export class AuthState {
       if (!Number.isFinite(now) || !Number.isInteger(windowMs) || windowMs < 1_000 || windowMs > 24 * 60 * 60 * 1000 || !Number.isInteger(limit) || limit < 1 || limit > 100) {
         return json({ error: "invalid_rate_request" }, 400);
       }
-      const before = Array.isArray(await this.storage.get("events")) ? await this.storage.get("events") : [];
+      const stored = await this.storage.get("events");
+      const before = Array.isArray(stored) ? stored : [];
       const events = before.filter(ts => Number.isFinite(ts) && ts > now - windowMs);
       if (events.length >= limit) {
         await this.storage.put("events", events);
