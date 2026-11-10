@@ -38,11 +38,12 @@ Fail-closed by default.
 
 - `AUTH_MAIL_ENABLED=false`
 - no usable sender address
+- no explicit custom `PUBLIC_BASE_URL`
 - no registered app
 - no app shared secret
 - no Email Service binding
 
-Until Cloudflare configuration is completed, the gateway cannot send email.
+Until Cloudflare configuration is completed, the gateway cannot send email. Production readiness also requires an explicit custom HTTPS auth domain; `workers.dev` and `pages.dev` are rejected as `PUBLIC_BASE_URL`.
 
 ## Endpoints
 
