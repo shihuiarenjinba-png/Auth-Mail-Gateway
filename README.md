@@ -41,6 +41,7 @@ Fail-closed by default.
 - no registered app
 - no app shared secret
 - no Email Service binding
+- no Cloudflare account ID or API token
 
 Until Cloudflare configuration is completed, the gateway cannot send email.
 
@@ -67,8 +68,10 @@ No Cloudflare account ID is hard-coded in the repository.
 
 See:
 
+- [Production handoff](docs/PRODUCTION_HANDOFF.md)
 - [Cloudflare setup](docs/CLOUDFLARE_SETUP.md)
 - [Application integration](docs/INTEGRATION.md)
+- [Security review](docs/SECURITY_REVIEW.md)
 
 ## Secrets
 
