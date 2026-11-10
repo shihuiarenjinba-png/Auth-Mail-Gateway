@@ -138,24 +138,25 @@ The assertion expires after two minutes and is one-time use.
 
 After this response, the application **must verify its Stripe subscription again** before issuing Pro access.
 
-## DemandScope migration
+## DemandScope status
 
-DemandScope currently contains its own disabled local Magic Link implementation. When the shared gateway URL is ready:
+DemandScope has already been migrated to the shared Gateway model.
 
-1. Keep the existing local email sender disabled.
-2. Add DemandScope Secrets:
-   - `AUTH_MAIL_GATEWAY_URL`
-   - `AUTH_MAIL_APP_ID=demandscope`
-   - `AUTH_MAIL_APP_SECRET`
-3. Add a server-side DemandScope endpoint that:
-   - accepts the purchase email,
-   - verifies the active DemandScope Stripe subscription,
-   - signs and sends the gateway request.
-4. Add `/api/auth-mail/callback`:
-   - validates the returned `state`,
-   - exchanges the code with the gateway,
-   - verifies the DemandScope Stripe subscription again,
-   - issues the existing `demand_pro` HttpOnly cookie.
-5. Remove the old direct email sending path only after gateway E2E passes.
+Production code now:
+
+- verifies the active DemandScope Stripe subscription before requesting a Magic Link,
+- signs Gateway requests with `AUTH_MAIL_APP_SECRET`,
+- receives the fixed callback at `/api/magic-link/callback`,
+- exchanges the one-time assertion with the Gateway,
+- re-verifies Stripe,
+- issues the existing `demand_pro` HttpOnly cookie.
+
+Remaining work is configuration only:
+
+- `AUTH_MAIL_GATEWAY_URL`
+- `AUTH_MAIL_APP_ID=demandscope`
+- secret `AUTH_MAIL_APP_SECRET`
 
 The two Cloudflare accounts do not need to be the same. Communication is HTTPS + per-app HMAC; no cross-account Cloudflare credentials are shared.
+
+See [Production handoff](PRODUCTION_HANDOFF.md) for the exact operator steps.
