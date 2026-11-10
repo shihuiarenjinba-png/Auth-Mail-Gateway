@@ -34,22 +34,26 @@ No inbox is required for the noreply address.
 
 Arbitrary-recipient Email Sending requires Workers Paid. Verified-destination testing is more limited on Free.
 
-## Phase 3 — add Email Sending to the Worker
+## Phase 3 — choose Email Sending transport
 
-Preferred method: an Email Sending Worker binding named:
+The gateway supports two Cloudflare Email Service transports.
 
-```text
-EMAIL
-```
+### REST path — recommended for the first handoff
 
-The application automatically prefers `env.EMAIL.send()`.
-
-If a binding cannot be used, the gateway also supports the REST API fallback:
+This path needs no repository config change:
 
 - variable: `CLOUDFLARE_EMAIL_ACCOUNT_ID`
 - secret: `CLOUDFLARE_EMAIL_API_TOKEN`
 
-Use a restricted Email Sending token, never the Global API Key.
+Create a narrowly scoped token with **Email Sending: Edit**. Never use the Global API Key.
+
+### Worker binding path
+
+The gateway also supports a Worker Email Sending binding named `EMAIL`.
+
+If you choose this path, add `send_email` to `wrangler.jsonc` in GitHub and redeploy. Do not rely on a dashboard-only binding, because later Wrangler deployments can treat the repository configuration as the source of truth.
+
+When the binding exists, the gateway automatically prefers `env.EMAIL.send()`.
 
 ## Phase 4 — gateway variables and secrets
 
@@ -69,6 +73,8 @@ APP_SHARED_SECRETS_JSON={...}
 ```
 
 Do not enable the gateway yet.
+
+After sender, custom auth domain, state binding, email transport, app config, and app secret are present, `GET /health` should report `configured=true`, `enabled=false`, `ready=false`.
 
 ## Phase 5 — required custom domain
 
@@ -140,3 +146,14 @@ AUTH_MAIL_ENABLED=true
 Do not copy old Cloudflare account IDs, Worker URLs, D1 IDs, or API tokens from DemandScope/NamiData into this project.
 
 This gateway has its own Cloudflare account context. Product applications talk to it only over HTTPS with HMAC.
+
+
+## CI deployment validation
+
+Every push and pull request runs:
+
+- unit/security tests,
+- JavaScript syntax checks,
+- `wrangler deploy --dry-run`.
+
+The dry-run compiles the Worker and validates the Durable Object configuration without uploading to Cloudflare.
